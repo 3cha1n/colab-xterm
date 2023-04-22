@@ -6,7 +6,16 @@ import base64
 from ptyprocess import PtyProcess
 import os
 from . import manager
+import io
 
+# Create a file-like buffer to capture terminal output
+output_buffer = io.StringIO()
+output_file = 'output.txt'
+
+def write_output(data):
+    output_buffer.write(data)
+    with open(output_file, 'a') as f:
+        f.write(data)
 
 class MainHandler(tornado.web.RequestHandler):
     def get(self):
@@ -14,13 +23,16 @@ class MainHandler(tornado.web.RequestHandler):
 
 
 class StdoutHandler(tornado.web.RequestHandler):
-    def initialize(self, process):
+    def initialize(self, process, log_output):
         self.process = process
+        self.log_output = log_output
 
     async def get(self):
         loop = asyncio.get_event_loop()
         try:
             b = await loop.run_in_executor(None, lambda:  self.process.read(4*1024*1024))
+            if self.log_output:
+                write_output(b.decode())  # Capture the output
             self.write(b)
             await self.flush()
         except EOFError as e:
@@ -47,9 +59,10 @@ class ResizeHandler(tornado.web.RequestHandler):
 
 
 class XTerm:
-    def __init__(self, argv: List, port=10000):
+    def __init__(self, argv: List, port=10000, log_output=False):
         self.argv = argv
         self.port = port
+        self.log_output = log_output
 
     def open(self):
         port = self.port
@@ -66,7 +79,7 @@ class XTerm:
 
         try:
             app = tornado.web.Application([
-                (r"/out", StdoutHandler, dict(process=process)),
+                (r"/out", StdoutHandler, dict(process=process, log_output=self.log_output)),
                 (r"/in/(.*)", StdinHandler, dict(process=process)),
                 (r"/resize", ResizeHandler, dict(process=process)),
                 (r"/(.*\.js)", tornado.web.StaticFileHandler,

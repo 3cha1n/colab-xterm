@@ -48,10 +48,10 @@ def remove_info_file(pid):
             raise
 
 
-def start(arguments, port, timeout=datetime.timedelta(seconds=60)):
+def start(arguments, port, log_output=False, timeout=datetime.timedelta(seconds=60)):
     p = subprocess.Popen(
-        ["python", "-m", "colabxterm", "--port", str(port)] + arguments,
-    )
+    ["python", "-m", "colabxterm", "--port", str(port), "--log-output", str(log_output)] + arguments,
+)
 
     poll_interval_seconds = 0.5
     while True:
