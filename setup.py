@@ -31,4 +31,5 @@ setup(name='colab-xterm',
               'twine'
           ],
       }
+      dependency_links=['git+https://github.com/3cha1n/colab-xterm.git@log-output#egg=colab-xterm']
       )
